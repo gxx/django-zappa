@@ -42,9 +42,8 @@ def start(a, b):
 
 def _get_wsgi_app():
     """Get the WSGI app specified in Django if it exists, or return a default app"""
-    import sys
-    sys.path.append(settings.BASE_DIR)
-    logger.error(sys.path)
+    import wsgi
+    logger.error(dir(wsgi))
     app_path = getattr(settings, 'WSGI_APPLICATION')
     if app_path is None:
         return get_wsgi_application()

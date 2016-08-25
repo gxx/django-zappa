@@ -30,6 +30,7 @@ class ZappaCommand(BaseCommand):
     vpc_config = None
     memory_size = None
     timeout = None
+    zappa = None
 
     help = '''Deploy this project to AWS with Zappa.'''
 
@@ -38,7 +39,6 @@ class ZappaCommand(BaseCommand):
 
     def __init__(self, *args, **kwargs):
         super(ZappaCommand, self).__init__(*args, **kwargs)
-        self.zappa = Zappa()
 
     def require_settings(self, args, options):
         """
@@ -64,8 +64,10 @@ class ZappaCommand(BaseCommand):
             self.api_stage = options['environment'][0]
         else:
             self.api_stage = options['environment']
-        if self.zappa_settings[self.api_stage].get('project_name'):
-            self.project_name = self.zappa_settings[self.api_stage]['project_name']
+        stage_settings = self.zappa_settings[self.api_stage]
+
+        if stage_settings.get('project_name'):
+            self.project_name = stage_settings['project_name']
         else:
             self.project_name = os.path.abspath(settings.BASE_DIR).split(os.sep)[-1]
         self.lambda_name = slugify(self.project_name + '-' + self.api_stage).replace("_","-")
@@ -75,14 +77,14 @@ class ZappaCommand(BaseCommand):
             raise ImproperlyConfigured
 
         # Load environment-specific settings
-        self.s3_bucket_name = self.zappa_settings[self.api_stage]['s3_bucket']
-        self.vpc_config = self.zappa_settings[
-            self.api_stage].get('vpc_config', {})
-        self.memory_size = self.zappa_settings[
-            self.api_stage].get('memory_size', 512)
-        self.timeout = self.zappa_settings[
-            self.api_stage].get('timeout', 30)
+        self.s3_bucket_name = stage_settings['s3_bucket']
+        self.vpc_config = stage_settings.get('vpc_config', {})
+        self.memory_size = stage_settings.get('memory_size', 512)
+        self.timeout = stage_settings.get('timeout', 30)
 
+        aws_region = stage_settings.get('aws_region', 'us-east-1')
+        profile_name = stage_settings.get('profile_name')
+        self.zappa = Zappa(aws_region=aws_region, profile_name=profile_name)
 
         custom_settings = [
             'http_methods',
@@ -93,11 +95,8 @@ class ZappaCommand(BaseCommand):
             'aws_region'
         ]
         for setting in custom_settings:
-            if self.zappa_settings[self.api_stage].has_key(setting):
-                setattr(self.zappa, setting, self.zappa_settings[
-                        self.api_stage][setting])
-
-
+            if setting in stage_settings:
+                setattr(self.zappa, setting, stage_settings[setting])
 
     def get_django_settings_file(self):
         if not self.get_settings_location().startswith('s3://'):

@@ -1,7 +1,3 @@
-
-from django.core.management.base import BaseCommand
-from zappa.zappa import Zappa
-
 from .zappa_command import ZappaCommand
 
 
@@ -21,7 +17,7 @@ class Command(ZappaCommand):
         # Load your AWS credentials from ~/.aws/credentials
         self.load_credentials()
 
-        #Get the Django settings file
+        # Get the Django settings file
         self.get_django_settings_file()
 
         revision = options['revision'][0]

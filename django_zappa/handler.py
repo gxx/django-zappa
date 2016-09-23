@@ -19,6 +19,7 @@ from werkzeug.wrappers import Response
 
 from zappa.middleware import ZappaWSGIMiddleware
 from zappa.wsgi import common_log, create_wsgi_request
+from django_zappa.signals import AWSEvent
 
 # Django requires settings and an explicit call to setup()
 # if being used from inside a python context.
@@ -153,5 +154,10 @@ def lambda_handler(event, context=None, settings_name="zappa_settings"):  # NoQA
         # Execute the function!
         app_function()
         return
+    elif event.get('Records'):
+        for record in event['Records']:
+            name = record['EventSubscriptionArn'].rsplit(':', 2)[-2]
+            source = record['EventSource']
+            AWSEvent.send(None, name=name, source=source, message=record)
     else:
         logger.error('Unhandled event: {}'.format(json.dumps(event)))
